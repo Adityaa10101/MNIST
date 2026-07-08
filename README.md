@@ -9,6 +9,8 @@ This repository contains a complete, lightweight machine learning pipeline for c
   - `mnist_cnn.py`: Trains a Convolutional Neural Network (CNN) with PyTorch and saves checkpoints to the `model/` directory.
 - **FastAPI Inference Server** (`main.py`):
   - Exposes an API endpoint (`/predict`) to predict handwritten digits using the trained CNN model checkpoint.
+- **Docker Support**:
+  - `Dockerfile` and `.dockerignore` files for building a lightweight containerized version of the FastAPI server.
 - **Testing Utility** (`test_file.py`):
   - Utility to load a sample image from the MNIST test set and generate a JSON payload suitable for testing the API server.
 
@@ -19,11 +21,14 @@ This repository contains a complete, lightweight machine learning pipeline for c
 ```text
 ├── model/
 │   └── chkpoint.pth          # Saved trained model weights
+├── .dockerignore             # Files to ignore in the Docker context
+├── .gitignore                # Git ignore file (excludes datasets/caches)
+├── Dockerfile                # Instructions to containerize the FastAPI application
 ├── main.py                   # FastAPI application for inference
 ├── mnist_cnn.py              # CNN model training script
 ├── mnist_from_scratch.py     # Feedforward neural network training script
+├── requirements.txt          # Python dependencies
 ├── test_file.py              # Helper to extract test sample for API testing
-├── .gitignore                # Git ignore file (excludes datasets/caches)
 └── README.md                 # Project documentation
 ```
 
@@ -73,6 +78,25 @@ uvicorn main:app --reload
 The server will be running on `http://127.0.0.1:8000`. You can visit the interactive API documentation at:
 - Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 - ReDoc: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+
+---
+
+## 🐳 Docker Deployment
+
+You can also package and run the FastAPI server inside a Docker container.
+
+### 1. Build the Docker Image
+From the repository root, build the Docker image:
+```bash
+docker build -t mnist-server .
+```
+
+### 2. Run the Container
+Run the container, mapping port `8000` to your host machine:
+```bash
+docker run -p 8000:8000 mnist-server
+```
+Once started, the API will be available at `http://localhost:8000`.
 
 ---
 
