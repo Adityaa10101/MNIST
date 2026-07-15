@@ -26,4 +26,8 @@ def predict(request: PredictionRequest):
         confidence,predicted=torch.max(probabilities,dim=1)
         predicted_class = predicted.item()
         confidence_val=confidence.item()
-        return {"Predicted_Class": predicted_class,"Prob":confidence_val}
+        all_probs = probabilities[0].tolist()
+        return {"Predicted_Class": predicted_class,
+                "Prob":confidence_val,
+                "All_Probs": all_probs
+            }
