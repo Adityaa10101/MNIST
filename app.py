@@ -6,13 +6,12 @@ import numpy as np
 from scipy import ndimage
 
 st.title("Draw a Digit")
+import os
+BACKEND_URL = os.environ.get("BACKEND_URL", "http://127.0.0.1:8000")
 
 canvas=st_canvas(height=280,width=280, stroke_width=10 ,stroke_color="#ffffff", background_color="#000000")
-if st.button("Predict"):
-    img = Image.fromarray(canvas.image_data)
-    img = img.convert("L")
-    array = np.array(img)
-    def center_digit(array):
+
+def center_digit(array):
         # array: your grayscale 280x280 array, BEFORE the /255 normalization step
     
         # 1. Bounding box (what already reasoned through)
@@ -40,16 +39,18 @@ if st.button("Predict"):
         shift_y, shift_x = int(round(14 - cy)), int(round(14 - cx))
         canvas28 = ndimage.shift(canvas28, (shift_y, shift_x))
         return canvas28
-    
+
+if st.button("Predict"):
+    img = Image.fromarray(canvas.image_data)
+    img = img.convert("L")
+    array = np.array(img)
     array = center_digit(array)
     array = array / 255
     array = (array - 0.5) / 0.5
     array = array.flatten()
     pixel_values = array.tolist()
 
-    response = requests.post("http://127.0.0.1:8000/predict", json={"pixel_values": pixel_values})
-    st.write("Status code:", response.status_code)
-    st.write("Raw response:", response.text)
+    response = requests.post(BACKEND_URL+"/predict", json={"pixel_values": pixel_values})
     data = response.json()
     predicted_class = data.get("Predicted_Class")
     confidence = data.get("Prob")
