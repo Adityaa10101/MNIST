@@ -1,40 +1,54 @@
-# MNIST Classification & FastAPI Inference Server
+# MNIST Classification & Web Interface
 
-This repository contains a complete, lightweight machine learning pipeline for classifying handwritten digits from the MNIST dataset. It includes model definitions in PyTorch, training scripts (both a simple Feedforward Network and a Convolutional Neural Network), model checkpointing, and a FastAPI inference server to serve predictions.
+This repository contains a complete machine learning pipeline for classifying handwritten digits from the MNIST dataset. It includes PyTorch model training scripts, a FastAPI inference server, a Streamlit interactive drawing canvas frontend, and configuration files for Docker and GitHub/Cloud deployment.
+
+---
 
 ## 🚀 Features
 
-- **Training Scripts**:
-  - `mnist_from_scratch.py`: Trains a classic fully-connected Neural Network (multilayer perceptron) from scratch.
-  - `mnist_cnn.py`: Trains a Convolutional Neural Network (CNN) with PyTorch and saves checkpoints to the `model/` directory.
+- **Interactive Streamlit Frontend** (`app.py`):
+  - Canvas interface for drawing digits directly in the browser.
+  - Live prediction displays with predicted digit, confidence scores, and a probability chart.
+  - Integrated **MNIST-compliant preprocessing** (digit centering) to guarantee high model accuracy.
 - **FastAPI Inference Server** (`main.py`):
-  - Exposes an API endpoint (`/predict`) to predict handwritten digits using the trained CNN model checkpoint.
-- **Docker Support**:
-  - `Dockerfile` and `.dockerignore` files for building a lightweight containerized version of the FastAPI server.
-- **Testing Utility** (`test_file.py`):
-  - Utility to load a sample image from the MNIST test set and generate a JSON payload suitable for testing the API server.
+  - High-performance API endpoint (`/predict`) serving model inferences.
+  - Returns predicted class, model confidence, and full probability distributions.
+- **Robust Digit Centering** (`center_digit`):
+  - Uses bounding-box cropping, aspect-ratio preserving scaling, and center-of-mass calculation via `scipy.ndimage` to replicate the standard MNIST dataset preprocessing.
+  - Elevates prediction confidence from ~0.48 to ~0.998 on off-center drawings.
+- **Docker Support** (`Dockerfile`):
+  - Multi-platform deployable container configured with Python 3.12.
+  - Utilizes shell form for `CMD` to support dynamic environment ports (e.g., on Render).
+- **Environment Agnostic Configuration**:
+  - Dynamically switches backend targets via the `BACKEND_URL` environment variable.
+- **Dev Container Integration** (`.devcontainer/devcontainer.json`):
+  - Out-of-the-box support for VS Code Dev Containers/GitHub Codespaces to launch backend/frontend instantly.
 
 ---
 
 ## 📁 Project Structure
 
 ```text
+├── .devcontainer/
+│   └── devcontainer.json     # Configuration for VS Code Dev Containers / Codespaces
 ├── model/
-│   └── chkpoint.pth          # Saved trained model weights
-├── .dockerignore             # Files to ignore in the Docker context
-├── .gitignore                # Git ignore file (excludes datasets/caches)
-├── Dockerfile                # Instructions to containerize the FastAPI application
-├── main.py                   # FastAPI application for inference
-├── mnist_cnn.py              # CNN model training script
-├── mnist_from_scratch.py     # Feedforward neural network training script
-├── requirements.txt          # Python dependencies
-├── test_file.py              # Helper to extract test sample for API testing
+│   └── chkpoint.pth          # Saved trained CNN model weights
+├── .dockerignore             # Excludes source/metadata files from Docker context
+├── .gitignore                # Git ignore rules (datasets, caches, environment configs)
+├── Dockerfile                # Build instructions for containerizing the FastAPI app
+├── app.py                    # Streamlit frontend with drawing canvas & preprocessing logic
+├── main.py                   # FastAPI application serving predictions
+├── mnist_cnn.py              # CNN model architecture & training script
+├── mnist_from_scratch.py     # Simple feedforward neural network training script
+├── requirements.txt          # Frontend dependencies (Streamlit Cloud convention)
+├── render_requirements.txt   # Backend dependencies (Render platform convention)
+├── test_file.py              # Helper to extract and test raw MNIST image arrays
 └── README.md                 # Project documentation
 ```
 
 ---
 
-## 🛠️ Setup & Installation
+## 🛠️ Setup & Local Installation
 
 ### 1. Clone the Repository
 ```bash
@@ -42,10 +56,17 @@ git clone https://github.com/Adityaa10101/MNIST.git
 cd MNIST
 ```
 
-### 2. Install Dependencies
-Make sure you have Python installed, then install the required packages:
+### 2. Configure Virtual Environment & Install Dependencies
+Create a virtual environment and install the required modules:
 ```bash
-pip install torch torchvision fastapi uvicorn pydantic
+python -m venv venv
+# On Windows
+venv\Scripts\activate
+# On macOS/Linux
+source venv/bin/activate
+
+# Install requirements for local development
+pip install -r requirements.txt -r render_requirements.txt
 ```
 
 ---
@@ -53,74 +74,91 @@ pip install torch torchvision fastapi uvicorn pydantic
 ## 🏋️ Training the Models
 
 ### CNN Model (Recommended)
-To train the CNN model and update the checkpoint:
+Trains a Convolutional Neural Network (CNN) in PyTorch and updates the checkpoint:
 ```bash
 python mnist_cnn.py
 ```
-This script downloads the MNIST dataset to `./root`, runs training for 5 epochs, prints the test accuracy, and saves the trained state dictionary to `./model/chkpoint.pth`.
+This script downloads the MNIST dataset to `./root`, trains for 5 epochs, logs testing accuracy, and outputs the model weights to `./model/chkpoint.pth`.
 
 ### Feedforward Network
-To train the fully-connected neural network:
+Trains a standard three-layer fully-connected Neural Network from scratch:
 ```bash
 python mnist_from_scratch.py
 ```
-This script trains a three-layer network for 15 epochs and prints the training/test losses and accuracy.
+Trains for 15 epochs and prints training/test losses and accuracy.
 
 ---
 
-## 🖥️ Running the FastAPI Inference Server
+## 🖥️ Running Locally
 
-Start the API server locally using `uvicorn`:
+### 1. Start the FastAPI Backend
+Start the server locally using `uvicorn`:
 ```bash
 uvicorn main:app --reload
 ```
+The API documentation will be available at:
+- **Swagger UI**: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+- **ReDoc**: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
 
-The server will be running on `http://127.0.0.1:8000`. You can visit the interactive API documentation at:
-- Swagger UI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
-- ReDoc: [http://127.0.0.1:8000/redoc](http://127.0.0.1:8000/redoc)
+### 2. Start the Streamlit Frontend
+In a new terminal window, configure the backend URL and run Streamlit:
+```bash
+# Windows
+set BACKEND_URL=http://127.0.0.1:8000
+streamlit run app.py
+
+# macOS/Linux
+BACKEND_URL=http://127.0.0.1:8000 streamlit run app.py
+```
+The Streamlit app will load automatically in your browser at `http://localhost:8501`.
+
+---
+
+## 🧠 MNIST Digit Preprocessing & Centering
+
+Raw canvas sketches are often off-center or drawn with varying scale, resulting in poor prediction accuracy (e.g., confidence of ~0.48 or incorrect classification). To match the MNIST dataset distribution, the `center_digit()` preprocessing pipeline in [app.py](file:///c:/Users/Lenovo/Desktop/ML/app.py) performs the following operations:
+1. **Bounding Box Crop**: Isolates the drawn digit by cropping all empty space (pixels <= 50).
+2. **Aspect-Preserving Resize**: Scales the cropped image so the longer side is exactly 20 pixels.
+3. **Canvas Padding**: Centers the resized digit on a blank 28x28 canvas (providing a 4-pixel border).
+4. **Center-of-Mass Alignment**: Shifts the digit mathematically using `scipy.ndimage.center_of_mass` and `scipy.ndimage.shift` so its center of mass aligns exactly with the center of the 28x28 canvas (14, 14).
+
+**Result**: Centering elevates prediction confidence on the same drawings from ~0.48 to ~0.998.
 
 ---
 
 ## 🐳 Docker Deployment
 
-You can also package and run the FastAPI server inside a Docker container.
+The FastAPI application can be packaged into a lightweight Docker image.
 
 ### 1. Build the Docker Image
-From the repository root, build the Docker image:
 ```bash
 docker build -t mnist-server .
 ```
 
 ### 2. Run the Container
-Run the container, mapping port `8000` to your host machine:
 ```bash
-docker run -p 8000:8000 mnist-server
+docker run -p 8000:8000 -e PORT=8000 mnist-server
 ```
-Once started, the API will be available at `http://localhost:8000`.
 
 ---
 
-## 🧪 Testing the API
+## 🌐 Cloud Deployment
 
-To send a prediction request to the FastAPI server:
+The application is deployed end-to-end:
 
-1. **Generate test data**:
-   Run `test_file.py` to extract the first image from the MNIST test set and output its pixel values as a JSON payload:
-   ```bash
-   python test_file.py
-   ```
+### Backend (Render)
+- **Service**: Web Service (Docker-based)
+- **URL**: [https://draw-a-digit-01d8.onrender.com](https://draw-a-digit-01d8.onrender.com)
+- **Configuration Note**: The `Dockerfile` uses the shell form for `CMD` (`CMD uvicorn main:app --host 0.0.0.0 --port $PORT`) so that Render's dynamic port assignment variable `$PORT` is expanded correctly.
+- **Dependencies**: Leverages [render_requirements.txt](file:///c:/Users/Lenovo/Desktop/ML/render_requirements.txt) to include PyTorch (CPU-only variant) to reduce image size and build times.
 
-2. **Send request via curl**:
-   Use the output from `test_file.py` in a POST request:
-   ```bash
-   curl -X POST "http://127.0.0.1:8000/predict" \
-        -H "Content-Type: application/json" \
-        -d "{\"pixel_values\": [<784 comma-separated float values>]}"
-   ```
-   **Expected Response:**
-   ```json
-   {
-     "Predicted_Class": 7,
-     "Prob": 0.9984
-   }
-   ```
+### Frontend (Streamlit Community Cloud)
+- **URL**: [https://draw-a-digit.streamlit.app](https://draw-a-digit.streamlit.app)
+- **Deployment Details**: 
+  - To prevent dependency conflicts and keep build images slim, frontend-specific packages (e.g., `streamlit-drawable-canvas`, `scipy`) are isolated in [requirements.txt](file:///c:/Users/Lenovo/Desktop/ML/requirements.txt) which Streamlit Cloud automatically picks up by default.
+  - Python version pinned to **3.12** inside the deployment dashboard to resolve segfaults caused by immature NumPy/SciPy wheel builds in newer, pre-release python releases (like Python 3.14).
+
+---
+
+## ⚠️ Known Limitations
+- **Single-Digit Centering**: The current centering implementation assumes a single digit is drawn. Multi-digit inputs or disjoint strokes will result in calculation shifts that break centering and lead to incorrect predictions.
